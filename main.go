@@ -12,20 +12,28 @@ type Transfer struct {
   data string
 }
  
-var Functions = map[string]func(map[string]interface{}, Transfer) Transfer{}
+var Functions = map[string]func(map[string]interface{}, Transfer) (Transfer,error){}
 
 func graphExec(graph string){
   lines := strings.Split(graph," -> ")
   var last Transfer
+  var err error
   re := regexp.MustCompile(`([\w.]+)(\(.+\))?`)
   for _,v := range lines {
     cmd := re.FindStringSubmatch(v)
     if cmd[2] != "" && cmd[2][:1] == "("{
       var parsed map[string]interface{}
       json.Unmarshal([]byte(cmd[2][1:len(cmd[2])-1]),&parsed)
-      last = Functions[cmd[1]](parsed,last)
+      parsed["argv"] = os.Args[3:]
+      last,err = Functions[cmd[1]](parsed,last)
+      if err != nil {
+        panic(fmt.Sprintf("Node threw error: %v",err))
+      }
     }else{
-      last = Functions[cmd[1]](map[string]interface{}{"empty":""},last)
+      last,err = Functions[cmd[1]](map[string]interface{}{"empty":"","argv": os.Args[3:]},last)
+      if err != nil {
+        panic(fmt.Sprintf("Node threw error: %v",err))
+      }
     }
   }
 }

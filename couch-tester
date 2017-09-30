@@ -1,0 +1,19 @@
+package main
+
+import (
+  "fmt"
+  "github.com/satori/go.uuid"
+)
+
+func main(){
+  id,err := addDoc("http://localhost:5984/","test_database",uuid.NewV4().String(),"{\"key1\": \"value1\"}")
+  if err != nil {
+    panic(err)
+  }
+  d,err := getDoc("http://localhost:5984/","test_database",id)
+  if err != nil {
+    panic(err)
+  }
+  fmt.Println(d)
+
+}
