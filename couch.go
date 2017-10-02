@@ -13,6 +13,7 @@ type Config struct {
   Id string `json:"_id"`
   Rev string `json:"_rev"`
   Graph string `json:"graph"`
+  LastSeq int `json:"last_seq"`
 }
 
 type AddResponse struct {
@@ -21,21 +22,54 @@ type AddResponse struct {
   Rev string `json:"rev"`
 }
 
+type Changes struct {
+  Changes []string
+  Last int
+}
+
 var client = &http.Client{}
 
-func getGraph(server string, ident string) (string,error) {
+func getGraph(server string, ident string) (Config,error) {
   var parsed Config
   resp,err := client.Get(fmt.Sprintf("%sgraph_configs/%s",server,ident))
   if err != nil {
-    return "",err
+    return Config{},err
   }
   defer resp.Body.Close()
   body, err := ioutil.ReadAll(resp.Body)
   if err != nil {
-    return "",err
+    return Config{},err
   }
   json.Unmarshal(body,&parsed)
-  return parsed.Graph,nil
+  return parsed,nil
+}
+
+func getChanges(server string, database string, last_seq int) (Changes,error) {
+  var parsed struct{
+    Results []struct{
+      Seq int `json:"seq"`
+      Id string `json:"id"`
+      Changes []struct{
+        Rev string `json:"rev"`
+      } `json:"changes"`
+    } `json:"results"`
+    LastSeq int `json:"last_seq"`
+  }
+  resp,err := client.Get(fmt.Sprintf("%s%s/_changes?since=%d",server,database,last_seq))
+  if err != nil {
+    return Changes{},err
+  }
+  defer resp.Body.Close()
+  body, err := ioutil.ReadAll(resp.Body)
+  if err != nil {
+    return Changes{},err
+  }
+  json.Unmarshal(body,&parsed)
+  out := Changes{Last: parsed.LastSeq}
+  for _,item := range parsed.Results {
+    out.Changes = append(out.Changes,item.Id)
+  }
+  return out,nil
 }
 
 func getDoc(server string, database string, ident string) ([]byte,error) {
@@ -49,6 +83,18 @@ func getDoc(server string, database string, ident string) ([]byte,error) {
     return []byte(""),err
   }
   return body,nil
+}
+
+func saveGraph(server string, ident string, doc Config) error {
+  d,er := json.Marshal(doc)
+  if er != nil {
+    return er
+  }
+  _,err := addDoc(server,"graph_configs",ident,string(d))
+  if err != nil {
+    return err
+  }
+  return nil
 }
 
 func doesDatabaseExist(server string, database string) (bool,error){

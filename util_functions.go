@@ -46,7 +46,8 @@ func in_couchdb(arg map[string]interface{}, last Transfer) (Transfer,error) {
 }
 
 func in_couchdb_args(arg map[string]interface{}, last Transfer) (Transfer,error){
-  doc, err := getDoc(arg["server"].(string),arg["database"].(string),arg["argv"].([]string)[0])
+  doc, err := getDoc(arg["server"].(string),arg["database"].(string),arg["argv"].(string))
+  fmt.Println(string(doc))
   if err != nil {
     return Transfer{},err
   }
@@ -77,6 +78,7 @@ func out_couchdb(arg map[string]interface{}, last Transfer) (Transfer,error) {
 
 func init(){
   Functions["in.couchdb"] = in_couchdb
+  Functions["in.couchdb.args"] = in_couchdb_args
   Functions["out.print"] = out_function
   Functions["dbg.data"] = debug_print
   Functions["dbg.args"] = debug_args

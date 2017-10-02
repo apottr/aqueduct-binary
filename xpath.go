@@ -22,7 +22,7 @@ func makeJSONXML(j string) ([]byte,error) {
   return x,nil
 }
 
-func execXpath(xml []byte, xpath string) ([]string,error) {
+func execXpath(xml []byte, xpath string, id string) ([]string,error) {
   path := xmlpath.MustCompile(xpath)
   root, err := xmlpath.Parse(bytes.NewReader(xml))
   if err != nil {
@@ -32,7 +32,7 @@ func execXpath(xml []byte, xpath string) ([]string,error) {
   iter := path.Iter(root)
   idx := 0
   for iter.Next() {
-    out = append(out,fmt.Sprintf("%d @$^* %s",idx,iter.Node().String()))
+    out = append(out,fmt.Sprintf("%d-%s @$^* %s",idx,id,iter.Node().String()))
     idx = idx + 1
   }
   return out,nil
@@ -54,7 +54,7 @@ func xpath_module(arg map[string]interface{}, last Transfer) (Transfer,error) {
       fmt.Printf("%s\n",xml)
     }
   }
-  out,xrr := execXpath(xml,arg["q"].(string))
+  out,xrr := execXpath(xml,arg["q"].(string),arg["argv"].(string))
   if xrr != nil {
     return Transfer{},xrr
   }
@@ -71,7 +71,7 @@ func main_standby(){
   if err != nil {
     panic(err)
   }
-  out,xrr := execXpath(xml,"/doc/statuses/*/text")
+  out,xrr := execXpath(xml,"/doc/statuses/*/text","testId")
   if xrr != nil {
     panic(xrr)
   }
